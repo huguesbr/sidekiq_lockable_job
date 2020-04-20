@@ -54,7 +54,7 @@ class Worker
 end
 ```
 
-When you job is **ENQUEUED** (`Worker.perform_async`), sidekiq LockableJob client middleware, will call `lockable_job_client_lock_keys` (before enqueuing the job) with the jobs arguments and set a lock for any returned keys
+When your job is **ENQUEUED** (`Worker.perform_async`), sidekiq LockableJob client middleware, will call `lockable_job_client_lock_keys` (before enqueuing the job) with the jobs arguments and set a lock for any returned keys
 
 ### Setting locks when job is processed
 
@@ -77,7 +77,7 @@ class Worker
 end
 ```
 
-When you job is **PROCESSED**, sidekiq LockableJob server middleware, will call `lockable_job_client_lock_keys` (before running the job) with the jobs arguments and set a lock for any returned keys
+When your job is **PROCESSED**, sidekiq LockableJob server middleware, will call `lockable_job_client_lock_keys` (before running the job) with the jobs arguments and set a lock for any returned keys
 
 ### Raising `LockableJob::LockedJobError` when job start to processed but is locked
 
@@ -100,7 +100,7 @@ class Worker
 end
 ```
 
-When you job is **about** to be **processed**, sidekiq LockableJob server middleware, will call `lockable_job_locked_by_keys` (before processing the job) with the jobs arguments and raise `Sidekiq::LockableJob::LockedJobError` if any of the returned keys is locked
+When your job is **about** to be **processed**, sidekiq LockableJob server middleware, will call `lockable_job_locked_by_keys` (before processing the job) with the jobs arguments and raise `Sidekiq::LockableJob::LockedJobError` if any of the returned keys is locked
 
 ### Unsetting locks when job is **succesfully** processed
 
@@ -123,7 +123,7 @@ class Worker
 end
 ```
 
-When you job is **successfully** to be **performed**, sidekiq LockableJob server middleware, will call `lockable_job_unlock_keys` (after processing the job) with the jobs arguments and unset lock for any returned keys
+When your job is **successfully** to be **performed**, sidekiq LockableJob server middleware, will call `lockable_job_unlock_keys` (after processing the job) with the jobs arguments and unset lock for any returned keys
 
 ## Specs
 
