@@ -1,4 +1,4 @@
-# SidekiqLockableJob
+# Sidekiq::LockableJob
 
 Prevent a job to run until another one complete.
 
@@ -6,7 +6,7 @@ Prevent a job to run until another one complete.
 
 But sometime your jobs will be enqueued independently, then for you do not know the job id on which you depend on (you could parse Sidekiq queue, but...)
 
-`SidekiqLockableJob` allows you to set some locks ( based on job params ) when a job is enqueued or processed (store in redis), to prevent any other jobs to run if locked ( based on job params ) and will unlock any previously set locks ( based on job params ) when a job is **succesfully** completed.
+`Sidekiq::LockableJob` allows you to set some locks ( based on job params ) when a job is enqueued or processed (store in redis), to prevent any other jobs to run if locked ( based on job params ) and will unlock any previously set locks ( based on job params ) when a job is **succesfully** completed.
 
 ## Installation
 
@@ -30,7 +30,7 @@ The gem is compose of four parts:
 
 - Setting locks when job is **enqueued**
 - Setting locks when job is **processed**
-- Raising `LockableJob::LockedJobError` when job **start** to processed but is locked
+- Raising `Sidekiq::LockableJob::LockedJobError` when job **start** to processed but is locked
 - Unsetting locks when job is **succesfully** processed
 
 ### Setting locks when job is **enqueued**
@@ -79,7 +79,7 @@ end
 
 When your job is **PROCESSED**, sidekiq LockableJob server middleware, will call `lockable_job_client_lock_keys` (before running the job) with the jobs arguments and set a lock for any returned keys
 
-### Raising `LockableJob::LockedJobError` when job start to processed but is locked
+### Raising `Sidekiq::LockableJob::LockedJobError` when job start to processed but is locked
 
 > happens in the sidekiq server middleware (on you rails worker)
 > including `Sidekiq::LockableJob` auto set the middleware chain
@@ -100,7 +100,10 @@ class Worker
 end
 ```
 
-When your job is **about** to be **processed**, sidekiq LockableJob server middleware, will call `lockable_job_locked_by_keys` (before processing the job) with the jobs arguments and raise `Sidekiq::LockableJob::LockedJobError` if any of the returned keys is locked
+When your job is **about** to be **processed**, sidekiq LockableJob server middleware, will call `lockable_job_locked_by_keys` (before processing the job) with the jobs arguments and raise `Sidekiq::LockableJob::LockedJobError` if any of the returned keys is locked.
+
+> [Sidekiq Error Handling](https://github.com/mperham/sidekiq/wiki/Error-Handling)
+> Sidekiq will retry failures with an exponential backoff using the formula (retry_count ** 4) + 15 + (rand(30) * (retry_count + 1)) (i.e. 15, 16, 31, 96, 271, ... seconds + a random amount of time). It will perform 25 retries over approximately 21 days. Assuming you deploy a bug fix within that time, the job will get retried and successfully processed. After 25 times, Sidekiq will move that job to the Dead Job queue, assuming that it will need manual intervention to work.
 
 ### Unsetting locks when job is **succesfully** processed
 
@@ -124,6 +127,14 @@ end
 ```
 
 When your job is **successfully** to be **performed**, sidekiq LockableJob server middleware, will call `lockable_job_unlock_keys` (after processing the job) with the jobs arguments and unset lock for any returned keys
+
+## Roadmap
+
+- [x] `Sidekiq::LockableJob` lock (on enqueuing, processing), unlock (on successfully processed), raise if locked (before processing)
+- [x] `Sidekiq::LockableJob` auto add itself to sidekiq middleware
+- [ ] Option to no auto include to middleware (and use locks manually or add in different order in middleware chain)
+- [ ] Externalize locking/unlocking/locked? mechanism (`LockableJobService`), and give option to use different service (ie.: not storing in Redis)
+- [ ] Option to requeue job (with delay), or swallow job failure if locked
 
 ## Specs
 
