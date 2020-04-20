@@ -20,11 +20,12 @@ module Sidekiq::LockableJob
         end
 
         let(:worker_class) { LockableWorker }
+        let(:lock_service) { worker_class.current_lockable_job_lock_service }
         subject { super().call(worker_class.new, {}, nil) {} }
 
         before(:each) do
-          Sidekiq::LockableJob.unlock('a')
-          Sidekiq::LockableJob.unlock('b')
+          lock_service.unlock('a')
+          lock_service.unlock('b')
         end
 
         describe 'LockableJob' do
@@ -32,11 +33,11 @@ module Sidekiq::LockableJob
           it_behaves_like 'perform the job'
 
           it 'set locks' do
-            expect(Sidekiq::LockableJob.locked?('a')).to eq(false)
-            expect(Sidekiq::LockableJob.locked?('b')).to eq(false)
+            expect(lock_service.locked?('a')).to eq(false)
+            expect(lock_service.locked?('b')).to eq(false)
             subject
-            expect(Sidekiq::LockableJob.locked?('a')).to eq(true)
-            expect(Sidekiq::LockableJob.locked?('b')).to eq(true)
+            expect(lock_service.locked?('a')).to eq(true)
+            expect(lock_service.locked?('b')).to eq(true)
           end
 
           context 'with single lock key' do
@@ -52,9 +53,9 @@ module Sidekiq::LockableJob
             it_behaves_like 'perform the job'
 
             it 'set lock' do
-              expect(Sidekiq::LockableJob.locked?('a')).to eq(false)
+              expect(lock_service.locked?('a')).to eq(false)
               subject
-              expect(Sidekiq::LockableJob.locked?('a')).to eq(true)
+              expect(lock_service.locked?('a')).to eq(true)
             end
           end
         end

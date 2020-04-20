@@ -17,11 +17,12 @@ module Sidekiq::LockableJob
           end
         end
 
+        let(:lock_service) { worker_class.current_lockable_job_lock_service }
         subject { described_class.new }
 
         before(:each) do
-          Sidekiq::LockableJob.unlock('a')
-          Sidekiq::LockableJob.unlock('b')
+          lock_service.unlock('a')
+          lock_service.unlock('b')
         end
 
         RSpec.shared_examples 'it yield' do
@@ -42,9 +43,9 @@ module Sidekiq::LockableJob
 
           RSpec.shared_examples 'set locks' do
             it 'set locks' do
-              lock_keys.each { |lock_key| expect(Sidekiq::LockableJob.locked?(lock_key)).to eq(false) }
+              lock_keys.each { |lock_key| expect(lock_service.locked?(lock_key)).to eq(false) }
               subject.call(worker_class, {}, '', nil) {}
-              lock_keys.each { |lock_key| expect(Sidekiq::LockableJob.locked?(lock_key)).to eq(true) }
+              lock_keys.each { |lock_key| expect(lock_service.locked?(lock_key)).to eq(true) }
             end
           end
 

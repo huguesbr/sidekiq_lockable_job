@@ -18,7 +18,7 @@ module Sidekiq::LockableJob
             keys = worker_klass.send(:lockable_job_unlock_keys, job['args'])
             keys = [keys] unless keys.nil? || keys.is_a?(Array)
             keys&.compact&.each do |key|
-              Sidekiq::LockableJob.unlock(key)
+              worker_klass.current_lockable_job_lock_service.unlock(key)
             end
           end
         end

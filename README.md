@@ -20,6 +20,8 @@ But if something went wrong processing the first job (database issue, ...), you 
 
 In this scenario, you will request a lock `denied_order_cancellation_ABC` to be set when you first job A is enqueued (order key `ABC` being extracted from the job params), and you will request to raise a lock error (which will retry the job later) when the second job B is about to be processed if any lock exist for `denied_order_cancellation_ABC (order key `ABC` being extracted from the job params)`. And finally you will request an unlock of `denied_order_cancellation_ABC` when the first job A is **successfully** completed later on, which will allow the second job to succeed on its later retry.
 
+> If you expect multiple job of type A to be enqueued and needs to wait for all this locks to be lift (using the same key), see `MultiLockService`
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -51,6 +53,8 @@ The gem is compose of four parts:
 > including `Sidekiq::LockableJob` auto set the middleware chain
 
 ```ruby
+require 'sidekiq_lockable_job'
+
 class Worker
   include Sidekiq::Worker
   include Sidekiq::LockableJob
@@ -74,6 +78,8 @@ When your job is **ENQUEUED** (`Worker.perform_async`), sidekiq LockableJob clie
 > including `Sidekiq::LockableJob` auto set the middleware chain
 
 ```ruby
+require 'sidekiq_lockable_job'
+
 class Worker
   include Sidekiq::Worker
   include Sidekiq::LockableJob
@@ -97,6 +103,8 @@ When your job is **PROCESSED**, sidekiq LockableJob server middleware, will call
 > including `Sidekiq::LockableJob` auto set the middleware chain
 
 ```ruby
+require 'sidekiq_lockable_job'
+
 class Worker
   include Sidekiq::Worker
   include Sidekiq::LockableJob
@@ -123,6 +131,8 @@ When your job is **about** to be **processed**, sidekiq LockableJob server middl
 > including `Sidekiq::LockableJob` auto set the middleware chain
 
 ```ruby
+require 'sidekiq_lockable_job'
+
 class Worker
   include Sidekiq::Worker
   include Sidekiq::LockableJob
@@ -140,14 +150,71 @@ end
 
 When your job is **successfully** to be **performed**, sidekiq LockableJob server middleware, will call `lockable_job_unlock_keys` (after processing the job) with the jobs arguments and unset lock for any returned keys
 
+
+## LockService vs MultiLockService vs CustomLockService
+
+By default `Sidekiq::LockableJob` use `Sidekiq::LockableJob::LockService` to lock, unlock and check lock.
+This service set lock time in redis when lock, unset redis key when unlock and check for redis key existance at lock check.
+
+This is enough for most common scenario, but you can use `Sidekiq::LockableJob::MultiLockService` if you need to count the number of lock.
+Each lock will increase the lock count, each unlock will decrease it, job will raise only if lock exist and count if > 0.
+
+> If you're using both default lock and multi lock, keys handle by a lock should all use the same lock service
+> see `lib/sidekiq/lockable_job/multi_lock_service.rb`
+
+```ruby
+require 'sidekiq_lockable_job'
+
+class MultiLockWorker
+  include Sidekiq::Worker
+  include Sidekiq::LockableJob
+  lockable_job_lock_service Sidekiq::LockableJob::MultiLockService
+end
+```
+
+If you want to use your own locking mechanism (to store somewhere else than redis, or handle locked differently), you can set your own `LockService` class.
+
+```ruby
+module CustomLockService
+  def self.lock(key)
+    // do you own lock
+  end
+
+  def self.unlock(key)
+    // do you own unlock
+  end
+
+  # non required helper method
+  def self.locked?(key)
+    // return true if locked
+  end
+
+  def self.handle_locked_by(key, worker_instance:, job:)
+    // do you own handle if locked
+    if locked?(key)
+      worker_instance.class.perform_in(3.hours, **job['args'])
+      return true
+    end
+    // return true if job should NOT run or false if it should
+    false
+  end
+end
+
+class Worker
+  include Sidekiq::Worker
+  include Sidekiq::LockableJob
+  lockable_job_lock_service CustomLockService
+end
+```
+
 ## Roadmap
 
 - [x] `Sidekiq::LockableJob` lock (on enqueuing, processing), unlock (on successfully processed), raise if locked (before processing)
 - [x] `Sidekiq::LockableJob` auto add itself to sidekiq middleware
-- [ ] Supporting lock/unlock count (if a job is queued 3 times, will increase the lock count to 3, and will require 3 unlock to be lifted)
+- [x] Supporting lock/unlock count (if a job is queued 3 times, will increase the lock count to 3, and will require 3 unlock to be lifted)
+- [x] Externalize locking/unlocking/locked? mechanism (`LockableJobService`), and give option to use different service (ie.: not storing in Redis)
+- [x] Option to requeue job (with delay), or swallow job failure if locked
 - [ ] Option to no auto include to middleware (and use locks manually or add in different order in middleware chain)
-- [ ] Externalize locking/unlocking/locked? mechanism (`LockableJobService`), and give option to use different service (ie.: not storing in Redis)
-- [ ] Option to requeue job (with delay), or swallow job failure if locked
 
 ## Specs
 
@@ -160,7 +227,7 @@ Sidekiq::LockableJob
   .locked?
     true if locked
     false if NOT locked
-  .raise_if_locked_by
+  .handle_locked_by
     raise if locked by any key
     raise if locked by single key
     DOT NOT raise if not locked by
@@ -179,7 +246,7 @@ Sidekiq::LockableJob::Middleware::Client::SetLocks
       behaves like set locks
         set locks
 
-Sidekiq::LockableJob::Middleware::Server::RaiseIfLocked
+Sidekiq::LockableJob::Middleware::Server::HandleLockedBy
   with no lock
     behaves like perform the job
       example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13

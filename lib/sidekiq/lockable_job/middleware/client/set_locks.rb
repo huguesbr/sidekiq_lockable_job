@@ -20,7 +20,7 @@ module Sidekiq::LockableJob
             keys = worker_klass.send(:lockable_job_client_lock_keys, job['args'])
             keys = [keys] unless keys.nil? || keys.is_a?(Array)
             keys&.compact&.each do |key|
-              Sidekiq::LockableJob.lock(key)
+              worker_klass.current_lockable_job_lock_service.lock(key)
             end
           end
           yield

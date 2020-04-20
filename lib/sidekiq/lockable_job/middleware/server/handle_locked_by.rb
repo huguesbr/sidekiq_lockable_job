@@ -4,7 +4,7 @@ require 'sidekiq'
 module Sidekiq::LockableJob
   module Middleware
     module Server
-      class RaiseIfLocked
+      class HandleLockedBy
         # @param [Object] worker the worker instance
         # @param [Hash] job the full job payload
         #   * @see https://github.com/mperham/sidekiq/wiki/Job-Format
@@ -16,7 +16,11 @@ module Sidekiq::LockableJob
           if worker_klass.respond_to?(:lockable_job_locked_by_keys)
             keys = worker_klass.send(:lockable_job_locked_by_keys, job['args'])
             keys = [keys] unless keys.nil? || keys.is_a?(Array)
-            Sidekiq::LockableJob.raise_if_locked_by(keys)
+            locked = worker_klass.current_lockable_job_lock_service.handle_locked_by(keys, worker_instance: worker, job: job)
+            # LockableJobService && MultiLockService raise if job is lock
+            # but a CustomLockService could decide to re-enqueued the job
+            # if the service return true, it mean the job is lock and we skip it's processing (don't yield)
+            return if locked
           end
           yield
         end

@@ -5,7 +5,7 @@ require 'fake_redis'
 module Sidekiq::LockableJob
   module Middleware
     module Server
-      RSpec.describe RaiseIfLocked do
+      RSpec.describe HandleLockedBy do
         require_relative 'shared'
 
         class LockableWorker
@@ -20,6 +20,7 @@ module Sidekiq::LockableJob
         end
 
         let(:worker_class) { LockableWorker }
+        let(:lock_service) { worker_class.current_lockable_job_lock_service }
         subject { super().call(worker_class.new, {}, nil) {} }
 
         context 'with no lock' do
@@ -31,14 +32,14 @@ module Sidekiq::LockableJob
           let(:lock_key) { 'a' }
 
           before do
-            Sidekiq::LockableJob.lock(lock_key)
+            lock_service.lock(lock_key)
           end
 
           RSpec.shared_examples 'raise an error' do
             it do
               expect {
                 subject
-              }.to raise_error Sidekiq::LockableJob::LockedJobError
+              }.to raise_error LockedJobError
             end
           end
 
@@ -54,6 +55,7 @@ module Sidekiq::LockableJob
             let(:lock_key) { 'c' }
 
             it_behaves_like 'perform the job'
+            it_behaves_like 'it yield'
           end
 
           context 'with single lock key' do

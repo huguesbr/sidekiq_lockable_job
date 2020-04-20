@@ -20,13 +20,14 @@ module Sidekiq::LockableJob
         end
 
         let(:worker_class) { LockableWorker }
+        let(:lock_service) { worker_class.current_lockable_job_lock_service }
         subject { super().call(worker_class.new, {}, nil) {} }
 
         context 'with previous locks' do
           let(:locked_keys) { ['a', 'b'] }
 
           before do
-            locked_keys.each { |locked_key| Sidekiq::LockableJob.lock(locked_key) }
+            locked_keys.each { |locked_key| lock_service.lock(locked_key) }
           end
 
           RSpec.shared_examples 'lock keys' do
@@ -34,9 +35,9 @@ module Sidekiq::LockableJob
             it_behaves_like 'perform the job'
 
             it 'remove all locks' do
-              locked_keys.each { |locked_key| expect(Sidekiq::LockableJob.locked?(locked_key)).to eq(true) }
+              locked_keys.each { |locked_key| expect(lock_service.locked?(locked_key)).to eq(true) }
               subject
-              locked_keys.each { |locked_key| expect(Sidekiq::LockableJob.locked?(locked_key)).to eq(false) }
+              locked_keys.each { |locked_key| expect(lock_service.locked?(locked_key)).to eq(false) }
             end
 
             context 'for another job' do
@@ -44,7 +45,7 @@ module Sidekiq::LockableJob
 
               it 'DOES NOT remove the lock' do
                 subject
-                locked_keys.each { |locked_key| expect(Sidekiq::LockableJob.locked?(locked_key)).to eq(true) }
+                locked_keys.each { |locked_key| expect(lock_service.locked?(locked_key)).to eq(true) }
               end
             end
           end
