@@ -8,6 +8,18 @@ But sometime your jobs will be enqueued independently, then for you do not know 
 
 `Sidekiq::LockableJob` allows you to set some locks ( based on job params ) when a job is enqueued or processed (store in redis), to prevent any other jobs to run if locked ( based on job params ) and will unlock any previously set locks ( based on job params ) when a job is **succesfully** completed.
 
+## Use cases
+
+For a real exemple at @Babylist.
+
+Let's say a third party service send you a webhook request when some products of an order are shipped. (-> job A)
+Then send you an eventual webhook request when some products of this order can not be shipped (without explicitely telling you which ones). (-> job B), on which you want to cancelled any non shipped products for this order.
+
+Your third party service obviously send you this two webhook in the right order.
+But if something went wrong processing the first job (database issue, ...), you might ended cancelled the full order because the first job A haven't run prior to the second job B.
+
+In this scenario, you will request a lock `denied_order_cancellation_ABC` to be set when you first job A is enqueued (order key `ABC` being extracted from the job params), and you will request to raise a lock error (which will retry the job later) when the second job B is about to be processed if any lock exist for `denied_order_cancellation_ABC (order key `ABC` being extracted from the job params)`. And finally you will request an unlock of `denied_order_cancellation_ABC` when the first job A is **successfully** completed later on, which will allow the second job to succeed on its later retry.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -132,6 +144,7 @@ When your job is **successfully** to be **performed**, sidekiq LockableJob serve
 
 - [x] `Sidekiq::LockableJob` lock (on enqueuing, processing), unlock (on successfully processed), raise if locked (before processing)
 - [x] `Sidekiq::LockableJob` auto add itself to sidekiq middleware
+- [ ] Supporting lock/unlock count (if a job is queued 3 times, will increase the lock count to 3, and will require 3 unlock to be lifted)
 - [ ] Option to no auto include to middleware (and use locks manually or add in different order in middleware chain)
 - [ ] Externalize locking/unlocking/locked? mechanism (`LockableJobService`), and give option to use different service (ie.: not storing in Redis)
 - [ ] Option to requeue job (with delay), or swallow job failure if locked
