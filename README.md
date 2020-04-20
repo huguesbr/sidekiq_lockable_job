@@ -219,7 +219,9 @@ end
 ## Specs
 
 ```
-Sidekiq::LockableJob
+Sidekiq::LockableJob::LockService
+  REDIS_PREFIX_KEY
+    has a prefix
   .lock
     lock
   .unlock
@@ -230,9 +232,9 @@ Sidekiq::LockableJob
   .handle_locked_by
     raise if locked by any key
     raise if locked by single key
-    DOT NOT raise if not locked by
-  .included
-    include middlewares
+    when not locked
+      DOT NOT raise if not locked by
+      return false
 
 Sidekiq::LockableJob::Middleware::Client::SetLocks
   LockableJob
@@ -261,6 +263,8 @@ Sidekiq::LockableJob::Middleware::Server::HandleLockedBy
     with a non lock key
       behaves like perform the job
         example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+      behaves like it yield
+        is expected to eq true
     with single lock key
       behaves like raise an error
         is expected to raise Sidekiq::LockableJob::LockedJobError
@@ -299,8 +303,43 @@ Sidekiq::LockableJob::Middleware::Server::UnsetLocks
         for another job
           DOES NOT remove the lock
 
+Sidekiq::LockableJob::MultiLockService
+  REDIS_PREFIX_KEY
+    has a prefix
+  .lock
+    lock
+  .unlock
+    unlock
+    with multiple lock
+      don't unlock at first
+      unlock
+  .locked?
+    true if locked
+    false if NOT locked
+  .handle_locked_by
+    raise if locked by any key
+    raise if locked by single key
+    when not locked
+      DOT NOT raise if not locked by
+      return false
+
+Sidekiq::LockableJob
+  .current_lockable_job_lock_service
+    has lock_service by default
+  .lockable_job_lock_service
+    set a custom lock service
+  .included
+    include client middleware
+    include server middleware (PENDING: Temporarily skipped with xit)
+
 SidekiqLockableJob
   has a version number
+
+Pending: (Failures listed here are expected and do not affect your suite's status)
+
+  1) Sidekiq::LockableJob.included include server middleware
+     # Temporarily skipped with xit
+     # ./spec/sidekiq/lockable_job_spec.rb:37
 ```
 
 ## Development
