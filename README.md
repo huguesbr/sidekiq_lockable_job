@@ -125,6 +125,92 @@ end
 
 When you job is **successfully** to be **performed**, sidekiq LockableJob server middleware, will call `lockable_job_unlock_keys` (after processing the job) with the jobs arguments and unset lock for any returned keys
 
+## Specs
+
+```
+Sidekiq::LockableJob
+  .lock
+    lock
+  .unlock
+    unlock
+  .locked?
+    true if locked
+    false if NOT locked
+  .raise_if_locked_by
+    raise if locked by any key
+    raise if locked by single key
+    DOT NOT raise if not locked by
+  .included
+    include middlewares
+
+Sidekiq::LockableJob::Middleware::Client::SetLocks
+  LockableJob
+    behaves like it yield
+      is expected to eq true
+    behaves like set locks
+      set locks
+    with single lock key
+      behaves like it yield
+        is expected to eq true
+      behaves like set locks
+        set locks
+
+Sidekiq::LockableJob::Middleware::Server::RaiseIfLocked
+  with no lock
+    behaves like perform the job
+      example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+    behaves like it yield
+      is expected to eq true
+  with lock set
+    behaves like raise an error
+      is expected to raise Sidekiq::LockableJob::LockedJobError
+    with another lock key
+      behaves like raise an error
+        is expected to raise Sidekiq::LockableJob::LockedJobError
+    with a non lock key
+      behaves like perform the job
+        example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+    with single lock key
+      behaves like raise an error
+        is expected to raise Sidekiq::LockableJob::LockedJobError
+
+Sidekiq::LockableJob::Middleware::Server::SetLocks
+  LockableJob
+    set locks
+    behaves like it yield
+      is expected to eq true
+    behaves like perform the job
+      example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+    with single lock key
+      set lock
+      behaves like it yield
+        is expected to eq true
+      behaves like perform the job
+        example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+
+Sidekiq::LockableJob::Middleware::Server::UnsetLocks
+  with previous locks
+    behaves like lock keys
+      remove all locks
+      behaves like it yield
+        is expected to eq true
+      behaves like perform the job
+        example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+      for another job
+        DOES NOT remove the lock
+    with single lock key
+      behaves like lock keys
+        remove all locks
+        behaves like it yield
+          is expected to eq true
+        behaves like perform the job
+          example at ./spec/sidekiq/lockable_job/middleware/server/shared.rb:13
+        for another job
+          DOES NOT remove the lock
+
+SidekiqLockableJob
+  has a version number
+```
 
 ## Development
 
