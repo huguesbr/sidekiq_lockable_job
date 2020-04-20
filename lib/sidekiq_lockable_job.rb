@@ -1,5 +1,5 @@
 require "sidekiq_lockable_job/version"
-require "sidekiq/lockable_job/lockable_job.rb"
+require_relative "sidekiq/lockable_job"
 
 module SidekiqLockableJob
   class Error < StandardError; end

@@ -1,6 +1,6 @@
 require 'sidekiq'
 require 'redis'
-require_relative 'middleware/middleware.rb'
+require_relative 'lockable_job/middleware/middleware.rb'
 
 module Sidekiq
   module LockableJob
