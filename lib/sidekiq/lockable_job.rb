@@ -25,8 +25,8 @@ module Sidekiq
       # chain is invoked so we're all good.
       #
       Sidekiq.configure_server do |config|
-        unless config.client_middleware.exists? Sidekiq::LockableJob::Middleware::Server::SetLocks
-          config.client_middleware.add Sidekiq::LockableJob::Middleware::Server::SetLocks
+        unless config.server_middleware.exists? Sidekiq::LockableJob::Middleware::Server::SetLocks
+          config.server_middleware.add Sidekiq::LockableJob::Middleware::Server::SetLocks
         end
         unless config.server_middleware.exists? Sidekiq::LockableJob::Middleware::Server::HandleLockedBy
           config.server_middleware.add Sidekiq::LockableJob::Middleware::Server::HandleLockedBy
