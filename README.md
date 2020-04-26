@@ -41,6 +41,8 @@ Or install it yourself as:
 
 ## Demo
 
+Thanks to [Asciinema](https://asciinema.org)!
+
     $ rake demo
 
 [![asciicast](https://asciinema.org/a/324095.svg)](https://asciinema.org/a/324095)
