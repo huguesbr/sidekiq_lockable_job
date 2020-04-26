@@ -39,9 +39,9 @@ Or install it yourself as:
     $ gem install sidekiq_lockable_job
 
 
-## Demo 
+## Demo
 
-  $ rake demo
+    $ rake demo
 
 [![asciicast](https://asciinema.org/a/324095.svg)](https://asciinema.org/a/324095)
 
