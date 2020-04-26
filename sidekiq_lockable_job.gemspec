@@ -38,4 +38,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 12.3.3"
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "fakeredis", '0.7.0'
+  spec.add_development_dependency 'tty-prompt', '0.19.0'
 end
