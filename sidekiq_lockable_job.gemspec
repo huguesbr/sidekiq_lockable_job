@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   end
   spec.require_paths = ["lib"]
 
-  spec.add_dependency 'sidekiq', '5.0.5'
+  spec.add_dependency 'sidekiq', '5.2.9'
   spec.add_dependency 'redis', '4.0.1'
 
   spec.add_development_dependency "bundler", "~> 2.0"
